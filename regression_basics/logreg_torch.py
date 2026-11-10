@@ -1,3 +1,5 @@
+from argparse import ArgumentParser
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -14,7 +16,14 @@ class LogisticRegression(nn.Module):
 
 if __name__ == '__main__':
     # Генерируем данные
-    X, y = make_classification_data(n=200)
+    parser = ArgumentParser()
+    parser.add_argument('--source', choices=('random', 'breast_cancer'), default='random')
+    args = parser.parse_args()
+    X, y = make_classification_data(n=200, source=args.source)
+    if args.source != 'random':
+        # Приводим признаки реального набора к сопоставимому масштабу.
+        X = (X - X.mean(dim=0)) / X.std(dim=0, unbiased=False).clamp_min(1e-8)
+    in_features = X.shape[1]
     
     # Создаём датасет и даталоадер
     dataset = ClassificationDataset(X, y)
@@ -23,7 +32,7 @@ if __name__ == '__main__':
     print(f'Количество батчей: {len(dataloader)}')
     
     # Создаём модель, функцию потерь и оптимизатор
-    model = LogisticRegression(in_features=2)
+    model = LogisticRegression(in_features=in_features)
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
     
@@ -57,6 +66,6 @@ if __name__ == '__main__':
     torch.save(model.state_dict(), 'logreg_torch.pth')
     
     # Загружаем модель
-    new_model = LogisticRegression(in_features=2)
+    new_model = LogisticRegression(in_features=in_features)
     new_model.load_state_dict(torch.load('logreg_torch.pth'))
     new_model.eval() 

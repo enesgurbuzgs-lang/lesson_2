@@ -1,3 +1,5 @@
+from argparse import ArgumentParser
+
 import torch
 from torch.utils.data import DataLoader
 from utils import make_regression_data, mse, log_epoch, RegressionDataset
@@ -37,7 +39,14 @@ class LinearRegressionManual:
 
 if __name__ == '__main__':
     # Генерируем данные
-    X, y = make_regression_data(n=200)
+    parser = ArgumentParser()
+    parser.add_argument('--source', choices=('random', 'diabetes'), default='random')
+    args = parser.parse_args()
+    X, y = make_regression_data(n=200, source=args.source)
+    if args.source != 'random':
+        # Приводим признаки реального набора к сопоставимому масштабу.
+        X = (X - X.mean(dim=0)) / X.std(dim=0, unbiased=False).clamp_min(1e-8)
+    in_features = X.shape[1]
     
     # Создаём датасет и даталоадер
     dataset = RegressionDataset(X, y)
@@ -47,7 +56,7 @@ if __name__ == '__main__':
     print(f'Пример данных: {dataset[0]}')
     
     # Обучаем модель
-    model = LinearRegressionManual(in_features=1)
+    model = LinearRegressionManual(in_features=in_features)
     lr = 0.1
     epochs = 100
     

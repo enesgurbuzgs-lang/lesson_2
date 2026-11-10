@@ -1,3 +1,5 @@
+from argparse import ArgumentParser
+
 import torch
 from torch.utils.data import DataLoader
 from utils import make_classification_data, accuracy, log_epoch, ClassificationDataset
@@ -39,7 +41,14 @@ class LogisticRegressionManual:
         self.b = state['b']
 
 if __name__ == '__main__':
-    X, y = make_classification_data(n=200)
+    parser = ArgumentParser()
+    parser.add_argument('--source', choices=('random', 'breast_cancer'), default='random')
+    args = parser.parse_args()
+    X, y = make_classification_data(n=200, source=args.source)
+    if args.source != 'random':
+        # Приводим признаки реального набора к сопоставимому масштабу.
+        X = (X - X.mean(dim=0)) / X.std(dim=0, unbiased=False).clamp_min(1e-8)
+    in_features = X.shape[1]
     
     # Создаём датасет и даталоадер
     dataset = ClassificationDataset(X, y)
@@ -49,7 +58,7 @@ if __name__ == '__main__':
     print(f'Пример данных: {dataset[0]}')
     
     # Обучаем модель
-    model = LogisticRegressionManual(in_features=2)
+    model = LogisticRegressionManual(in_features=in_features)
     lr = 0.1
     epochs = 100
     

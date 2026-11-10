@@ -1,3 +1,5 @@
+from argparse import ArgumentParser
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -14,7 +16,14 @@ class LinearRegression(nn.Module):
 
 if __name__ == '__main__':
     # Генерируем данные
-    X, y = make_regression_data(n=200)
+    parser = ArgumentParser()
+    parser.add_argument('--source', choices=('random', 'diabetes'), default='random')
+    args = parser.parse_args()
+    X, y = make_regression_data(n=200, source=args.source)
+    if args.source != 'random':
+        # Приводим признаки реального набора к сопоставимому масштабу.
+        X = (X - X.mean(dim=0)) / X.std(dim=0, unbiased=False).clamp_min(1e-8)
+    in_features = X.shape[1]
     
     # Создаём датасет и даталоадер
     dataset = RegressionDataset(X, y)
@@ -23,7 +32,7 @@ if __name__ == '__main__':
     print(f'Количество батчей: {len(dataloader)}')
     
     # Создаём модель, функцию потерь и оптимизатор
-    model = LinearRegression(in_features=1)
+    model = LinearRegression(in_features=in_features)
     criterion = nn.MSELoss()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
     
@@ -49,6 +58,6 @@ if __name__ == '__main__':
     torch.save(model.state_dict(), 'linreg_torch.pth')
     
     # Загружаем модель
-    new_model = LinearRegression(in_features=1)
+    new_model = LinearRegression(in_features=in_features)
     new_model.load_state_dict(torch.load('linreg_torch.pth'))
     new_model.eval() 
